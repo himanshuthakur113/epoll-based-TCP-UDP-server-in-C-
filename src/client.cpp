@@ -42,7 +42,7 @@ int main(){
 
     std::cout << "Connected to the server" <<std::endl;
 
-    char message[] = {"Hello from client"};
+    char message[] = {"Hello"};
 
 
     send(client_socket,message,strlen(message),0);
@@ -56,6 +56,11 @@ int main(){
     //and the kernal pass the data to the nic buffer here nic driver come into use 
     //this passing from kernal to nic is done by dma without cpu intervention
     
+    char buffer[1024] = {0};
+
+    int bytes_recieved = recv(client_socket,buffer,sizeof(buffer),0);
+    std::cout << buffer << std::endl;
+
     close(client_socket);
 
     return 0;

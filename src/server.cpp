@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <sys/socket.h> //for socket system call
 #include <netinet/in.h> // for address strucute
@@ -6,10 +5,12 @@
 #include <arpa/inet.h>  //for inet_pton converting it string into ip address
 #include <unistd.h>     //for close()
 
-const int port = 12960;
+const int PORT = 12960;
+const int BACKLOG = 5;
 
 int main(){
-   
+
+    
     int server_socket = socket(AF_INET,SOCK_STREAM,0);
                                                 
     if(server_socket == -1)
@@ -23,7 +24,7 @@ int main(){
     int address_length = sizeof(server_address);
 
     server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(port);  //port are logical endpoint  that is used to direct network traffic to specific process or sevices
+    server_address.sin_port = htons(PORT);  //port are logical endpoint  that is used to direct network traffic to specific process or sevices
                                             //htons convert the unsigned short integer hostshort from host byte order to network byte order(little endian to big endian)
 
     server_address.sin_addr.s_addr = INADDR_ANY; // s_addr is part of sin_addr which store the ip address the actual value is stored in s_addr
@@ -38,32 +39,41 @@ int main(){
    }
 
   
-    if(listen(server_socket,5) < 0)
+    if(listen(server_socket,BACKLOG) < 0)
     {
         std::cerr << "listen failure" <<std::endl;
     }
                                   //so now the socket is waiting for client to connect
                             //5 is backlog the max no. of pending request the os should hold for this socket these request has completed a 3 way handshake
-    std::cout << "Listening for connection" << port <<std::endl;
+    std::cout << "Listening for connection" << PORT <<std::endl;
  
-    
-    int communication_socket = accept(server_socket,(struct sockaddr*)&server_address,(socklen_t*)&address_length);  //created a new socket which take its data from old socket since it is server this process will handle multiple clients so one socket form connecting to client and other for communication 
+    while(true)
+    {
+        std::cout << "server waiting for client" <<std::endl;
+
+        int communication_socket = accept(server_socket,(struct sockaddr*)&server_address,(socklen_t*)&address_length);  //created a new socket which take its data from old socket since it is server this process will handle multiple clients so one socket form connecting to client and other for communication 
                                                                                                                           //we used the accept call here and the third parameter we passed is pointer to struct socklen_t which is size of server address before intialization telling the accept what would be size and after accept modify it to actual size
 
     if(communication_socket < 0)
     {
         std::cerr << "communication socket failed" <<std::endl;
+        continue;
     }
 
     std::cout << "connection accepted from client" <<std::endl;
 
     char buffer[1024] = {0};
 
-    recv(communication_socket,buffer,1024,0);
+    int bytes_recieved = recv(communication_socket,buffer,1024,0);
 
-    std::cout << "client buffer" << buffer << std::endl;
+    std::cout << "client msg" << buffer << std::endl;
+
+    send(communication_socket,buffer,bytes_recieved,0);
+
 
     close(communication_socket);
+
+    }
     close(server_socket);
     
     return 0;
