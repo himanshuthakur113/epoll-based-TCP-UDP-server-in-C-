@@ -32,7 +32,7 @@ int main(){
         return -1;
     }
 
-    if(connect(client_socket, (struct sockaddr*)server_address,sizeof(server_address)) < 0)
+    if(connect(client_socket, (struct sockaddr*)&server_address,sizeof(server_address)) < 0)
     {
         std::cerr<<"connection failed" << std::endl;
         return -1;
@@ -56,7 +56,7 @@ int main(){
     //and the kernal pass the data to the nic buffer here nic driver come into use 
     //this passing from kernal to nic is done by dma without cpu intervention
     
-    close();
+    close(client_socket);
 
     return 0;
 }

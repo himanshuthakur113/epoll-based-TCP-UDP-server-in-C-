@@ -10,7 +10,7 @@ const int port = 12960;
 
 int main(){
    
-    
+    int server_socket = socket(AF_INET,SOCK_STREAM,0);
                                                 
     if(server_socket == -1)
     {
@@ -20,7 +20,7 @@ int main(){
 
     sockaddr_in server_address; //datatype for holding address of server
 
-    int address_lenght = sizeof(server_address);
+    int address_length = sizeof(server_address);
 
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(port);  //port are logical endpoint  that is used to direct network traffic to specific process or sevices
@@ -47,7 +47,7 @@ int main(){
     std::cout << "Listening for connection" << port <<std::endl;
  
     
-    communication_socket = accept(server_socket,(struct sockaddr*)&server_address,(socklen_t)&address_lenth);  //created a new socket which take its data from old socket since it is server this process will handle multiple clients so one socket form connecting to client and other for communication 
+    int communication_socket = accept(server_socket,(struct sockaddr*)&server_address,(socklen_t*)&address_length);  //created a new socket which take its data from old socket since it is server this process will handle multiple clients so one socket form connecting to client and other for communication 
                                                                                                                           //we used the accept call here and the third parameter we passed is pointer to struct socklen_t which is size of server address before intialization telling the accept what would be size and after accept modify it to actual size
 
     if(communication_socket < 0)
@@ -63,6 +63,8 @@ int main(){
 
     std::cout << "client buffer" << buffer << std::endl;
 
-
+    close(communication_socket);
+    close(server_socket);
+    
     return 0;
 }
