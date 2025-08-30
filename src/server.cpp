@@ -4,9 +4,13 @@
 #include <string.h>     //for strlen
 #include <arpa/inet.h>  //for inet_pton converting it string into ip address
 #include <unistd.h>     //for close()
+#include <sys/select.h>  //for select used in non blocking tcp for multiple client
+#include <vector>
+
 
 const int PORT = 12960;
 const int BACKLOG = 5;
+std::vector<int> com_socket; //list for communication socket for each client
 
 int main(){
 
@@ -18,6 +22,17 @@ int main(){
         std::cerr << "socket creation failed" <<std::endl;
         return -1;
     }
+
+    int opt = 1;
+    if(setsockopt(server_socket,SOL_SOCKET,SO_REUSEADDR,(char*)&opt,sizeof(opt)<0) //this is for address already in use error when we exit a server os hold its address and port in
+                                                                                   //in TIME_WAIT stoping other to bind to that address or port
+                                                                                   //but SO_REUSSEADDR make it to connect to oher
+    {
+        std::cerr << "setsocketopt error\n";
+        return -1;
+    }
+
+
 
     sockaddr_in server_address; //datatype for holding address of server
 
@@ -46,10 +61,47 @@ int main(){
                                   //so now the socket is waiting for client to connect
                             //5 is backlog the max no. of pending request the os should hold for this socket these request has completed a 3 way handshake
     std::cout << "Listening for connection" << PORT <<std::endl;
+
+    fd_set readfds;
+    size_t valread;
+    int maxfd;
+    int sd = 0;
+    int acitivity;
  
     while(true)
     {
         std::cout << "server waiting for client" <<std::endl;
+        
+        FD_ZERO(&readfds);
+        FD_SET(server_socket,&readfds);
+        maxfd = server_socket;
+        
+        for(auto sd:com_socket)
+        {
+            FD_SET(sd,&readfds);
+            if(sd > maxfd)
+            {
+                maxfd = sd;
+            }
+
+        }
+
+
+        if(sd > maxfd)
+        {
+            maxfd = sd;
+        }
+
+
+        activity = select(maxfd+1, &readfds,NULL,NULL,NULL);
+        if(activity < 0)
+        {
+            std::cerr << "select failed\n";
+            continue;
+        }
+
+
+        if(FD_ISSET(server_socke
 
         int communication_socket = accept(server_socket,(struct sockaddr*)&server_address,(socklen_t*)&address_length);  //created a new socket which take its data from old socket since it is server this process will handle multiple clients so one socket form connecting to client and other for communication 
                                                                                                                           //we used the accept call here and the third parameter we passed is pointer to struct socklen_t which is size of server address before intialization telling the accept what would be size and after accept modify it to actual size
