@@ -8,6 +8,7 @@
 #include <vector>        //for storing client 
 #include <cerrno>        //for error
 #include <fcntl.h>
+#include <algorithm>
 
 
 constexpr int PORT = 12960;         //compile-time constant these are fixed at compile time and do not change at runtime
@@ -21,7 +22,7 @@ void make_nonblocking(int fd){
         perror("fcntl get");
         exit(1);
     }
-    if(fcntl(fd, F_SETFL, flags | 0_NONBLOCK) == -1)
+    if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
     {
         perror("fcntl set");
         exit(1);
@@ -30,6 +31,12 @@ void make_nonblocking(int fd){
 
 
 std::vector<int> clients;       //for storing file descriptor for communication socket
+
+
+void remove_client(int s){
+    clients.erase(std::remove(clients.begin(), clients.end(), s), clients.end());
+    close(s);
+}
 
 
 int main(){
@@ -84,35 +91,51 @@ int main(){
 
         if(communication_socket >= 0)
         {
-            make_nonblocking(client_socket);
-            clients.push_back(client_socket);
+            make_nonblocking(communication_socket);
+            clients.push_back(communication_socket);
             std::cout << "New client connected \n" ;
         }
 
-        else if(client_socket < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
+        else if(communication_socket < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
         {
             perror("accept failed");
         }
 
         for(auto it = clients.begin(); it != clients.end();){
-            int socket =    
+            int socket =  *it;
+            char buffer[MAX_BUFFER];
+            int nbytes = recv(socket, buffer, sizeof(buffer), 0);
 
-
-
-
-    char buffer[1024] = {0};
-
-    int bytes_recieved = recv(communication_socket,buffer,1024,0);
-
-    std::cout << "client msg" << buffer << std::endl;
-
-    send(communication_socket,buffer,bytes_recieved,0);
-
-
-    close(communication_socket);
-
+            if(nbytes > 0)
+            {
+                send(socket, buffer, nbytes, 0);
+                ++it;
+            }
+            else if(nbytes == 0)
+            {
+                std::cout <<"Client " << socket << "disconnected\n";
+                remove_client(socket);
+                it = clients.erase(it);
+            }
+            else
+            {
+                if(errno == EAGAIN || errno == EWOULDBLOCK)
+                {
+                    ++it;
+                }
+                else
+                {
+                    perror("recv");
+                    remove_client(socket);
+                    it = clients.erase(it);
+                }
+            }
+        }
     }
+
+
     close(server_socket);
-    
     return 0;
+
+
 }
